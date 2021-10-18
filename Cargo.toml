@@ -9,6 +9,7 @@ edition = "2018"
 async-trait = { version = "0.1.50", default-features = false }
 ethers = { git = "https://github.com/guanqun/ethers-rs", features = ["ws"] }
 serde = { version = "1.0.124", features = ["derive"] }
+dapp = { git = "https://github.com/gakonst/dapptools-rs.git", package = "dapp" }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
