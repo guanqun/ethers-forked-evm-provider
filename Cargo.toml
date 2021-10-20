@@ -6,10 +6,32 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+arrayref = "0.3"
+address-literal = "1.2.0"
+primitive-types = { version = "0.10.1" }
+anyhow = "1.0"
+auto_impl = "0.4"
 async-trait = { version = "0.1.50", default-features = false }
-ethers = { git = "https://github.com/guanqun/ethers-rs", features = ["ws"] }
+async-recursion = "0.3"
+bytes = { version = "1", default-features = false, features = ["serde"] }
+ethers = { git = "https://github.com/guanqun/ethers-rs", features = ["ws", "openssl"] }
 serde = { version = "1.0.124", features = ["derive"] }
 dapp = { git = "https://github.com/gakonst/dapptools-rs.git", package = "dapp" }
+evmodin = { git = "https://github.com/vorot93/evmodin" }
+sha2 = "0.9"
+sha3 = "0.9"
+futures = "0.3"
+tokio = { version = "1", features = ["full"] }
+hex-literal = "0.3"
+substrate-bn = "0.6"
+ripemd160 = "0.9"
+num-bigint = "0.4"
+secp256k1 = { version = "0.20", features = ["global-context", "recovery"] }
+num-traits = "0.2"
+rlp = "0.5"
+rlp-derive = "0.1"
+hex = "0.4"
+derive_more = "0.99"
 
 [dev-dependencies]
-tokio = { version = "1", features = ["full"] }
+serde_json = "1.0"
