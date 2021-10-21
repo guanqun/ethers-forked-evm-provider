@@ -1,4 +1,3 @@
-use std::convert::TryFrom;
 use crate::akula::evm::execute;
 use crate::akula::interface::State;
 use crate::akula::intra_block_state::IntraBlockState;
@@ -13,8 +12,9 @@ use ethers::types::{Bytes, U64};
 use evmodin::Revision;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
+use std::convert::TryFrom;
 use std::fmt::Debug;
-use std::ops::{Deref, DerefMut};
+use std::ops::DerefMut;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -88,10 +88,15 @@ impl Middleware for ForkedEvmProvider {
         _block: Option<BlockId>,
     ) -> Result<PendingTransaction<'_, Self::Provider>, Self::Error> {
         let tx = tx.into();
-        let gas = tx.gas().map(|x| i64::try_from(x.as_u64()).unwrap()).unwrap_or_default();
+        let gas = tx
+            .gas()
+            .map(|x| i64::try_from(x.as_u64()).unwrap())
+            .unwrap_or_default();
 
         let mut lock = self.backend.lock().await;
-        let _ = execute(lock.deref_mut(), &self.header, Revision::London, &tx, gas).await.unwrap();
+        let _ = execute(lock.deref_mut(), &self.header, Revision::London, &tx, gas)
+            .await
+            .unwrap();
 
         // TODO:
         Ok(PendingTransaction::new(H256::zero(), &self.dummy_provider))
@@ -103,9 +108,15 @@ impl Middleware for ForkedEvmProvider {
         _block: Option<BlockId>,
     ) -> Result<Bytes, Self::Error> {
         let mut lock = self.backend.lock().await;
-        let ret = execute(lock.deref_mut(), &self.header, Revision::London, tx, i64::MAX)
-            .await
-            .unwrap();
+        let ret = execute(
+            lock.deref_mut(),
+            &self.header,
+            Revision::London,
+            tx,
+            i64::MAX,
+        )
+        .await
+        .unwrap();
         Ok(ret.output_data.into())
     }
 
