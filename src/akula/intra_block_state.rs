@@ -120,6 +120,10 @@ impl<S: State> IntraBlockState<S> {
         }
     }
 
+    pub fn db(&self) -> &S {
+        &self.db
+    }
+
     pub async fn exists(&mut self, address: Address) -> anyhow::Result<bool> {
         let obj = get_object(&self.db, &mut self.objects, address).await?;
 

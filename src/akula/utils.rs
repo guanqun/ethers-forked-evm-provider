@@ -1,5 +1,6 @@
 use bytes::{Bytes, BytesMut};
-use ethers::types::H256;
+use ethers::types::transaction::eip2718::TypedTransaction;
+use ethers::types::{Address, H256, U256};
 use sha3::{Digest, Keccak256};
 
 pub fn keccak256(data: impl AsRef<[u8]>) -> H256 {
@@ -25,4 +26,23 @@ pub fn left_pad(buffer: Bytes, min_size: usize) -> Bytes {
 
 pub fn right_pad(buffer: Bytes, min_size: usize) -> Bytes {
     pad::<false>(buffer, min_size)
+}
+
+pub fn get_effective_gas_price(tx: &TypedTransaction, base_fee_per_gas: U256) -> U256 {
+    match tx {
+        TypedTransaction::Legacy(tx) => tx.gas_price.unwrap_or_default(),
+        TypedTransaction::Eip2930(tx) => tx.tx.gas_price.unwrap_or_default(),
+        TypedTransaction::Eip1559(tx) => {
+            assert!(tx.max_fee_per_gas.unwrap_or_default() >= base_fee_per_gas);
+            let priority_gas_fee = std::cmp::min(
+                tx.max_priority_fee_per_gas.unwrap_or_default(),
+                tx.max_fee_per_gas.unwrap_or_default() - base_fee_per_gas,
+            );
+            priority_gas_fee + base_fee_per_gas
+        }
+    }
+}
+
+pub fn get_sender(tx: &TypedTransaction) -> Address {
+    tx.from().cloned().unwrap_or_default()
 }

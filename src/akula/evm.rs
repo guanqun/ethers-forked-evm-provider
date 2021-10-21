@@ -3,8 +3,8 @@ use crate::akula::fee_params::{fee, param};
 use crate::akula::interface::State;
 use crate::akula::intra_block_state::IntraBlockState;
 use crate::akula::types::{Log, PartialHeader};
+use crate::akula::utils::{get_effective_gas_price, get_sender};
 use crate::akula::{precompiled, EMPTY_HASH};
-use anyhow::Context;
 use async_recursion::async_recursion;
 use bytes::Bytes;
 use ethers::types::transaction::eip2718::TypedTransaction;
@@ -483,11 +483,8 @@ where
                 }
                 InterruptVariant::GetTxContext(i) => {
                     let base_fee_per_gas = self.header.base_fee_per_gas.unwrap_or_else(U256::zero);
-                    // TODO: fix following two fields
-                    let tx_gas_price = U256::one();
-                    // let tx_gas_price = self.txn.effective_gas_price(base_fee_per_gas);
-                    let tx_origin = Address::default();
-                    // let tx_origin = self.txn.sender;
+                    let tx_gas_price = get_effective_gas_price(&self.txn, base_fee_per_gas);
+                    let tx_origin = get_sender(&self.txn);
                     let block_coinbase = self.beneficiary;
                     let block_number = self.header.number;
                     let block_timestamp = self.header.timestamp;
@@ -511,27 +508,13 @@ where
                     i.resume(TxContextData { context })
                 }
                 InterruptVariant::GetBlockHash(i) => {
-                    // let n = i.data().block_number;
-                    //
-                    // let base_number = self.header.number;
-                    // let distance = base_number - n;
-                    // assert!(distance <= 256);
-                    //
-                    // let mut hash = self.header.parent_hash;
-                    //
-                    // for i in 1..distance {
-                    //     hash = self
-                    //         .state
-                    //         .db()
-                    //         .read_header(base_number - i, hash)
-                    //         .await?
-                    //         .context("no header")?
-                    //         .parent_hash;
-                    // }
+                    let n = i.data().block_number;
 
-                    todo!();
+                    let base_number = self.header.number;
+                    let distance = base_number - n;
+                    assert!(distance <= 256);
 
-                    let hash = H256::zero();
+                    let hash = self.state.db().read_block_hash(n).await?;
 
                     i.resume(BlockHash { hash })
                 }

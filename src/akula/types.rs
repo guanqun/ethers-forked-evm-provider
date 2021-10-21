@@ -3,7 +3,7 @@ use derive_more::{Deref, DerefMut, Display, From};
 use ethers::abi::ethereum_types::H64;
 use ethers::types::{Address, H160, H256, U256};
 use std::collections::HashMap;
-use std::{mem::size_of, ops::Add};
+use std::ops::Add;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Log {

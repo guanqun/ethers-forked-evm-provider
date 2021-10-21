@@ -1,6 +1,4 @@
 use address_literal::addr;
-use ethers::providers::Middleware;
-use ethers::types::Address;
 use ethers_forked_evm_provider::ForkedEvmProvider;
 use std::sync::Arc;
 

@@ -1,15 +1,11 @@
 use crate::akula::interface::State;
-use crate::akula::intra_block_state::IntraBlockState;
 use crate::akula::types::{Account, Incarnation, PartialHeader};
 use crate::akula::utils::keccak256;
 use async_trait::async_trait;
 use bytes::Bytes;
 use ethers::prelude::*;
-use evmodin::host::AccessStatus;
 use futures::future;
-use std::cell::RefCell;
-use std::collections::btree_map::Entry;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -34,7 +30,7 @@ impl Web3RemoteState {
 }
 
 impl Debug for Web3RemoteState {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, _f: &mut Formatter<'_>) -> std::fmt::Result {
         todo!()
     }
 }
@@ -88,23 +84,28 @@ impl State for Web3RemoteState {
             .await?)
     }
 
-    async fn previous_incarnation(&self, address: Address) -> anyhow::Result<Incarnation> {
-        todo!()
+    async fn read_block_header(&self, block_number: u64) -> anyhow::Result<Option<PartialHeader>> {
+        let block = self.provider.get_block(block_number).await?;
+        Ok(block.map(|b| PartialHeader {
+            parent_hash: b.parent_hash,
+            beneficiary: b.author,
+            state_root: Default::default(),
+            receipts_root: Default::default(),
+            difficulty: b.difficulty,
+            number: self.block_number,
+            gas_limit: b.gas_limit.as_u64(),
+            gas_used: b.gas_used.as_u64(),
+            timestamp: b.timestamp.as_u64(),
+            extra_data: b.extra_data.0.clone(),
+            mix_hash: b.mix_hash.unwrap_or_default(),
+            nonce: Default::default(),
+            base_fee_per_gas: b.base_fee_per_gas,
+        }))
     }
 
-    async fn read_header(
-        &self,
-        block_number: u64,
-        block_hash: H256,
-    ) -> anyhow::Result<Option<PartialHeader>> {
-        todo!()
-    }
-
-    async fn total_difficulty(
-        &self,
-        block_number: u64,
-        block_hash: H256,
-    ) -> anyhow::Result<Option<U256>> {
-        todo!()
+    /// This is used for blockhash opcode.
+    async fn read_block_hash(&self, block_number: u64) -> anyhow::Result<H256> {
+        let block = self.provider.get_block(block_number).await?;
+        Ok(block.map(|b| b.hash).flatten().unwrap_or_default())
     }
 }
