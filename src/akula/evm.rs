@@ -70,7 +70,7 @@ pub async fn execute<B: State>(
     let res = if let Some(to) = to {
         evm.call(Message {
             kind: CallKind::Call,
-            is_static: true,
+            is_static: from.is_zero(),
             depth: 0,
             sender: from,
             input_data,
