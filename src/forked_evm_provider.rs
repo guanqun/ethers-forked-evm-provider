@@ -8,7 +8,7 @@ use async_trait::async_trait;
 use ethers::abi::ethereum_types::H256;
 use ethers::core::types::transaction::eip2718::TypedTransaction;
 use ethers::core::types::{BlockId, NameOrAddress};
-use ethers::providers::{JsonRpcClient, Middleware, PendingTransaction, ProviderError};
+use ethers::providers::{JsonRpcClient, Middleware, PendingTransaction, Provider, ProviderError};
 use ethers::types::{Bytes, U64};
 use evmodin::Revision;
 use serde::de::DeserializeOwned;
@@ -23,6 +23,8 @@ pub struct ForkedEvmProvider {
     header: PartialHeader,
     state_block_number: u64,
     backend: Arc<Mutex<IntraBlockState<Web3RemoteState>>>,
+
+    dummy_provider: Provider<LoopbackProvider>,
 }
 
 impl ForkedEvmProvider {
@@ -42,12 +44,16 @@ impl ForkedEvmProvider {
             header,
             state_block_number,
             backend: Arc::new(Mutex::new(intra_block_state)),
+            dummy_provider: Provider::new(LoopbackProvider),
         })
     }
 }
 
+#[derive(Debug)]
+pub struct LoopbackProvider;
+
 #[async_trait]
-impl JsonRpcClient for ForkedEvmProvider {
+impl JsonRpcClient for LoopbackProvider {
     type Error = ProviderError;
 
     async fn request<T, R>(&self, _method: &str, _params: T) -> Result<R, Self::Error>
@@ -62,7 +68,7 @@ impl JsonRpcClient for ForkedEvmProvider {
 #[async_trait]
 impl Middleware for ForkedEvmProvider {
     type Error = ProviderError;
-    type Provider = Self;
+    type Provider = LoopbackProvider;
     type Inner = Self;
 
     fn inner(&self) -> &Self::Inner {
@@ -71,18 +77,6 @@ impl Middleware for ForkedEvmProvider {
 
     async fn get_block_number(&self) -> Result<U64, Self::Error> {
         Ok(self.state_block_number.into())
-    }
-
-    async fn call(
-        &self,
-        tx: &TypedTransaction,
-        _block: Option<BlockId>,
-    ) -> Result<Bytes, Self::Error> {
-        let mut lock = self.backend.lock().await;
-        let ret = execute(lock.deref_mut(), &self.header, Revision::London, tx, i64::MAX)
-            .await
-            .unwrap();
-        Ok(ret.output_data.into())
     }
 
     async fn send_transaction<T: Into<TypedTransaction> + Send + Sync>(
@@ -96,7 +90,20 @@ impl Middleware for ForkedEvmProvider {
         let mut lock = self.backend.lock().await;
         let _ = execute(lock.deref_mut(), &self.header, Revision::London, &tx, gas).await.unwrap();
 
-        Err(ProviderError::CustomError("TODO".to_string()))
+        // TODO:
+        Ok(PendingTransaction::new(H256::zero(), &self.dummy_provider))
+    }
+
+    async fn call(
+        &self,
+        tx: &TypedTransaction,
+        _block: Option<BlockId>,
+    ) -> Result<Bytes, Self::Error> {
+        let mut lock = self.backend.lock().await;
+        let ret = execute(lock.deref_mut(), &self.header, Revision::London, tx, i64::MAX)
+            .await
+            .unwrap();
+        Ok(ret.output_data.into())
     }
 
     async fn get_storage_at<T: Into<NameOrAddress> + Send + Sync>(
