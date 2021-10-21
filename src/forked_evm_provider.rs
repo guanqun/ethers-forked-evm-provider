@@ -56,6 +56,9 @@ pub struct LoopbackProvider;
 impl JsonRpcClient for LoopbackProvider {
     type Error = ProviderError;
 
+    /// This is used by PendingTransaction only.
+    ///         self.request("eth_getTransactionByHash", [hash]).await
+    /// we can safely panic on other cases.
     async fn request<T, R>(&self, _method: &str, _params: T) -> Result<R, Self::Error>
     where
         T: Debug + Serialize + Send + Sync,
