@@ -2,7 +2,7 @@ use crate::akula::evm::execute;
 use crate::akula::interface::State;
 use crate::akula::intra_block_state::IntraBlockState;
 use crate::akula::types::PartialHeader;
-use crate::forked_backend::Web3RemoteState;
+use crate::state_muxer::{BackendConfig, StateMuxer};
 use async_trait::async_trait;
 use ethers::abi::ethereum_types::H256;
 use ethers::core::types::transaction::eip2718::TypedTransaction;
@@ -22,7 +22,7 @@ use tokio::sync::Mutex;
 pub struct ForkedEvmProvider {
     header: PartialHeader,
     state_block_number: u64,
-    backend: Arc<Mutex<IntraBlockState<Web3RemoteState>>>,
+    backend: Arc<Mutex<IntraBlockState<StateMuxer>>>,
 
     dummy_provider: Provider<LoopbackProvider>,
 }
@@ -31,14 +31,30 @@ impl ForkedEvmProvider {
     /// A file path, if that path exists, we don't send request to remote RPC calls.
     /// An URL to access archive node. It would only be used when the above file doesn't exist or log query.
     /// A state snapshot number, it's used to ensure everything matches.
-    pub async fn new(state_block_number: u64, archive_wss_url: &str) -> anyhow::Result<Self> {
-        let remote_state = Web3RemoteState::new(state_block_number, archive_wss_url).await?;
-        let header = remote_state
+    pub async fn new(
+        state_block_number: u64,
+        archive_wss_url: &str,
+        db_path: &str,
+    ) -> anyhow::Result<Self> {
+        let config = if std::path::Path::new(db_path).exists() {
+            // use db as the first choice, otherwise use the tee mode
+            BackendConfig::LocalOnly {
+                db_path: db_path.into(),
+            }
+        } else {
+            BackendConfig::TeeWeb3ToLocal {
+                wss_url: archive_wss_url.to_string(),
+                db_path: db_path.into(),
+            }
+        };
+
+        let state_mux = StateMuxer::new(state_block_number, config).await?;
+        let header = state_mux
             .read_block_header(state_block_number + 1)
             .await?
             .expect("failed to get header");
 
-        let intra_block_state = IntraBlockState::new(remote_state);
+        let intra_block_state = IntraBlockState::new(state_mux);
 
         Ok(Self {
             header,

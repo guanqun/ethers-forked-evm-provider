@@ -8,7 +8,7 @@ mod IUniswapV2Pair;
 #[tokio::test]
 async fn test_simple_public_view_functions() {
     let archive_wss_url = std::env::var("ARCHIVE_WSS_URL").expect("failed to get ARCHIVE_WSS_URL");
-    let provider = ForkedEvmProvider::new(13458688, &archive_wss_url)
+    let provider = ForkedEvmProvider::new(13458688, &archive_wss_url, "/tmp/sqlite.db")
         .await
         .unwrap();
     let client = Arc::new(provider);

@@ -1,7 +1,5 @@
-use crate::akula::interface::State;
 use crate::akula::types::{Account, Incarnation, PartialHeader};
 use crate::akula::utils::keccak256;
-use async_trait::async_trait;
 use bytes::Bytes;
 use ethers::prelude::*;
 use futures::future;
@@ -35,9 +33,8 @@ impl Debug for Web3RemoteState {
     }
 }
 
-#[async_trait]
-impl State for Web3RemoteState {
-    async fn read_account(&self, address: Address) -> anyhow::Result<Option<Account>> {
+impl Web3RemoteState {
+    pub async fn read_account(&self, address: Address) -> anyhow::Result<Option<Account>> {
         let (balance, nonce, code) = future::try_join3(
             self.provider
                 .get_balance(address, Some(self.block_number.into())),
@@ -67,12 +64,12 @@ impl State for Web3RemoteState {
         }
     }
 
-    async fn read_code(&self, code_hash: H256) -> anyhow::Result<Bytes> {
+    pub async fn read_code(&self, code_hash: H256) -> anyhow::Result<Bytes> {
         let lock = self.code_hash_map.lock().await;
         Ok(lock.get(&code_hash).cloned().unwrap())
     }
 
-    async fn read_storage(
+    pub async fn read_storage(
         &self,
         address: Address,
         _incarnation: Incarnation,
@@ -84,7 +81,10 @@ impl State for Web3RemoteState {
             .await?)
     }
 
-    async fn read_block_header(&self, block_number: u64) -> anyhow::Result<Option<PartialHeader>> {
+    pub async fn read_block_header(
+        &self,
+        block_number: u64,
+    ) -> anyhow::Result<Option<PartialHeader>> {
         let block = self.provider.get_block(block_number).await?;
         Ok(block.map(|b| PartialHeader {
             difficulty: b.difficulty,

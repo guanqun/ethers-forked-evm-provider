@@ -1,19 +1,15 @@
-use crate::akula::interface::State;
 use crate::akula::types::{Account, Incarnation, PartialHeader};
 use crate::akula::utils::keccak256;
-use async_trait::async_trait;
 use bytes::Bytes;
 use ethers::types::U256;
 use ethers::types::{Address, H256};
 use rusqlite::{params, Connection, OpenFlags};
 use std::path::Path;
 use std::str::FromStr;
-use std::sync::Arc;
-use tokio::sync::Mutex;
 
 #[derive(Debug)]
 pub struct SqliteBackend {
-    db: Arc<Mutex<Connection>>,
+    db: Connection,
 }
 
 impl SqliteBackend {
@@ -21,32 +17,29 @@ impl SqliteBackend {
     pub fn new<P: AsRef<Path>>(path: P) -> Self {
         let db = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)
             .expect("failed to open sqlite dumper");
-        Self {
-            db: Arc::new(Mutex::new(db)),
-        }
+        Self { db }
     }
-}
 
-#[async_trait]
-impl State for SqliteBackend {
-    async fn read_account(&self, address: Address) -> anyhow::Result<Option<Account>> {
+    pub fn read_account(&self, address: Address) -> anyhow::Result<Option<Account>> {
         let address_text = hex::encode(address.as_bytes());
-        let lock = self.db.lock().await;
-        let balance_text: String = lock
+        let balance_text: String = self
+            .db
             .query_row(
                 "SELECT balance FROM balance WHERE address == ?1",
                 params![address_text.as_str()],
                 |row| row.get(0),
             )
             .map_err(|_| anyhow::anyhow!("failed to get balance"))?;
-        let nonce_text: String = lock
+        let nonce_text: String = self
+            .db
             .query_row(
                 "SELECT nonce FROM nonce WHERE address == ?1",
                 params![address_text.as_str()],
                 |row| row.get(0),
             )
             .map_err(|_| anyhow::anyhow!("failed to get nonce"))?;
-        let code_hash_text: String = lock
+        let code_hash_text: String = self
+            .db
             .query_row(
                 "SELECT hash FROM code WHERE address == ?1",
                 params![address_text.as_str()],
@@ -66,10 +59,10 @@ impl State for SqliteBackend {
         }))
     }
 
-    async fn read_code(&self, code_hash: H256) -> anyhow::Result<Bytes> {
+    pub fn read_code(&self, code_hash: H256) -> anyhow::Result<Bytes> {
         let code_hash_text = hex::encode(code_hash.as_bytes());
-        let lock = self.db.lock().await;
-        let code_text: String = lock
+        let code_text: String = self
+            .db
             .query_row(
                 "SELECT code FROM code WHERE hash = ?1",
                 params![code_hash_text],
@@ -80,7 +73,7 @@ impl State for SqliteBackend {
         Ok(code.into())
     }
 
-    async fn read_storage(
+    pub fn read_storage(
         &self,
         address: Address,
         _incarnation: Incarnation,
@@ -89,8 +82,8 @@ impl State for SqliteBackend {
         let address_text = hex::encode(address.as_bytes());
         let location_text = hex::encode(location.as_bytes());
 
-        let lock = self.db.lock().await;
-        let value_text: String = lock
+        let value_text: String = self
+            .db
             .query_row(
                 "SELECT value FROM storage WHERE address == ?1 AND slot == ?2",
                 params![address_text.as_str(), location_text.as_str()],
@@ -101,9 +94,8 @@ impl State for SqliteBackend {
         Ok(value)
     }
 
-    async fn read_block_header(&self, block_number: u64) -> anyhow::Result<Option<PartialHeader>> {
-        let lock = self.db.lock().await;
-        let (hash_text, base_fee_per_gas_text, timestamp, gas_limit, difficulty_text, beneficiary_text): (String, String, u64, u64, String, String) = lock
+    pub fn read_block_header(&self, block_number: u64) -> anyhow::Result<Option<PartialHeader>> {
+        let (hash_text, base_fee_per_gas_text, timestamp, gas_limit, difficulty_text, beneficiary_text): (String, String, u64, u64, String, String) = self.db
             .query_row(
                 "SELECT hash, base_fee_per_gas, timestamp, gas_limit, difficulty, beneficiary FROM block WHERE number == ?1",
                 params![block_number],
@@ -136,6 +128,7 @@ impl State for SqliteBackend {
     }
 }
 
+#[derive(Debug)]
 pub struct SqliteDumper {
     db: Connection,
 }
@@ -228,7 +221,6 @@ impl SqliteDumper {
 
 #[cfg(test)]
 mod tests {
-    use crate::akula::interface::State;
     use crate::akula::types::Incarnation;
     use crate::sqlite_backend::{SqliteBackend, SqliteDumper};
     use address_literal::addr;
@@ -278,7 +270,6 @@ mod tests {
 
             let account = backend
                 .read_account(addr!("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"))
-                .await
                 .unwrap()
                 .unwrap();
 
@@ -296,12 +287,11 @@ mod tests {
                     Incarnation(0),
                     rand_hash_1,
                 )
-                .await
                 .unwrap();
 
             assert_eq!(storage, rand_hash_2);
 
-            let header = backend.read_block_header(13330).await.unwrap().unwrap();
+            let header = backend.read_block_header(13330).unwrap().unwrap();
 
             assert_eq!(header.hash, rand_hash_3);
             assert_eq!(header.base_fee_per_gas, Some(u256!(6666)));
