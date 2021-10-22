@@ -87,25 +87,13 @@ impl State for Web3RemoteState {
     async fn read_block_header(&self, block_number: u64) -> anyhow::Result<Option<PartialHeader>> {
         let block = self.provider.get_block(block_number).await?;
         Ok(block.map(|b| PartialHeader {
-            parent_hash: b.parent_hash,
-            beneficiary: b.author,
-            state_root: Default::default(),
-            receipts_root: Default::default(),
             difficulty: b.difficulty,
             number: self.block_number,
             gas_limit: b.gas_limit.as_u64(),
-            gas_used: b.gas_used.as_u64(),
             timestamp: b.timestamp.as_u64(),
-            extra_data: b.extra_data.0.clone(),
-            mix_hash: b.mix_hash.unwrap_or_default(),
-            nonce: Default::default(),
             base_fee_per_gas: b.base_fee_per_gas,
+            beneficiary: b.author,
+            hash: b.hash.unwrap_or_default(),
         }))
-    }
-
-    /// This is used for blockhash opcode.
-    async fn read_block_hash(&self, block_number: u64) -> anyhow::Result<H256> {
-        let block = self.provider.get_block(block_number).await?;
-        Ok(block.map(|b| b.hash).flatten().unwrap_or_default())
     }
 }

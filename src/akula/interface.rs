@@ -23,6 +23,4 @@ pub trait State: Debug + Send + Sync {
     }
 
     async fn read_block_header(&self, block_number: u64) -> anyhow::Result<Option<PartialHeader>>;
-
-    async fn read_block_hash(&self, block_number: u64) -> anyhow::Result<H256>;
 }

@@ -32,6 +32,9 @@ rlp = "0.5"
 rlp-derive = "0.1"
 hex = "0.4"
 derive_more = "0.99"
+rusqlite = "0.26.1"
+u256-literal = "1"
 
 [dev-dependencies]
 serde_json = "1.0"
+tempfile = "3.2.0"

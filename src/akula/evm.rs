@@ -514,7 +514,7 @@ where
                     let distance = base_number - n;
                     assert!(distance <= 256);
 
-                    let hash = self.state.db().read_block_hash(n).await?;
+                    let hash = self.state.db().read_block_header(n).await?.unwrap().hash;
 
                     i.resume(BlockHash { hash })
                 }

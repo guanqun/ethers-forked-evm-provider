@@ -1,7 +1,6 @@
 use bytes::Bytes;
 use derive_more::{Deref, DerefMut, Display, From};
-use ethers::abi::ethereum_types::H64;
-use ethers::types::{Address, H160, H256, U256};
+use ethers::types::{Address, H256, U256};
 use std::collections::HashMap;
 use std::ops::Add;
 
@@ -23,21 +22,13 @@ pub struct Account {
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 /// Partial header definition without ommers hash and transactions root.
 pub struct PartialHeader {
-    pub parent_hash: H256,
-    pub beneficiary: H160,
-    pub state_root: H256,
-    pub receipts_root: H256,
-    // delete for now
-    // pub logs_bloom: Bloom,
     pub difficulty: U256,
     pub number: u64,
     pub gas_limit: u64,
-    pub gas_used: u64,
     pub timestamp: u64,
-    pub extra_data: Bytes,
-    pub mix_hash: H256,
-    pub nonce: H64,
     pub base_fee_per_gas: Option<U256>,
+    pub hash: H256,
+    pub beneficiary: Address,
 }
 
 #[derive(Clone, Debug, Default)]
