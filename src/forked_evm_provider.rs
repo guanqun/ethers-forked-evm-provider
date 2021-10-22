@@ -15,6 +15,7 @@ use serde::Serialize;
 use std::convert::TryFrom;
 use std::fmt::Debug;
 use std::ops::DerefMut;
+use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -34,17 +35,15 @@ impl ForkedEvmProvider {
     pub async fn new(
         state_block_number: u64,
         archive_wss_url: &str,
-        db_path: &str,
+        db_path: PathBuf,
     ) -> anyhow::Result<Self> {
-        let config = if std::path::Path::new(db_path).exists() {
+        let config = if db_path.as_path().exists() {
             // use db as the first choice, otherwise use the tee mode
-            BackendConfig::LocalOnly {
-                db_path: db_path.into(),
-            }
+            BackendConfig::LocalOnly { db_path }
         } else {
             BackendConfig::TeeWeb3ToLocal {
                 wss_url: archive_wss_url.to_string(),
-                db_path: db_path.into(),
+                db_path,
             }
         };
 

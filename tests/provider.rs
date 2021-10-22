@@ -1,5 +1,6 @@
 use address_literal::addr;
 use ethers_forked_evm_provider::ForkedEvmProvider;
+use std::path::Path;
 use std::sync::Arc;
 
 #[allow(non_snake_case)]
@@ -7,8 +8,12 @@ mod IUniswapV2Pair;
 
 #[tokio::test]
 async fn test_simple_public_view_functions() {
+    let db_path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests")
+        .join("simple-public-view.db");
+
     let archive_wss_url = std::env::var("ARCHIVE_WSS_URL").expect("failed to get ARCHIVE_WSS_URL");
-    let provider = ForkedEvmProvider::new(13458688, &archive_wss_url, "/tmp/sqlite.db")
+    let provider = ForkedEvmProvider::new(13458688, &archive_wss_url, db_path)
         .await
         .unwrap();
     let client = Arc::new(provider);
