@@ -33,12 +33,17 @@ pub fn get_effective_gas_price(tx: &TypedTransaction, base_fee_per_gas: U256) ->
         TypedTransaction::Legacy(tx) => tx.gas_price.unwrap_or_default(),
         TypedTransaction::Eip2930(tx) => tx.tx.gas_price.unwrap_or_default(),
         TypedTransaction::Eip1559(tx) => {
-            assert!(tx.max_fee_per_gas.unwrap_or_default() >= base_fee_per_gas);
-            let priority_gas_fee = std::cmp::min(
-                tx.max_priority_fee_per_gas.unwrap_or_default(),
-                tx.max_fee_per_gas.unwrap_or_default() - base_fee_per_gas,
-            );
-            priority_gas_fee + base_fee_per_gas
+            if let Some(max_fee_per_gas) = tx.max_fee_per_gas {
+                assert!(max_fee_per_gas >= base_fee_per_gas);
+                let priority_gas_fee = std::cmp::min(
+                    tx.max_priority_fee_per_gas.unwrap_or_default(),
+                    max_fee_per_gas - base_fee_per_gas,
+                );
+                priority_gas_fee + base_fee_per_gas
+            } else {
+                // just query calls
+                U256::zero()
+            }
         }
     }
 }
