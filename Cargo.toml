@@ -16,7 +16,6 @@ async-recursion = "0.3"
 bytes = { version = "1", default-features = false, features = ["serde"] }
 ethers = { git = "https://github.com/guanqun/ethers-rs", features = ["ws", "openssl"] }
 serde = { version = "1.0.124", features = ["derive"] }
-dapp = { git = "https://github.com/gakonst/dapptools-rs.git", package = "dapp" }
 evmodin = { git = "https://github.com/vorot93/evmodin" }
 sha2 = "0.9"
 sha3 = "0.9"
