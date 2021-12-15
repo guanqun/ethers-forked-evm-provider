@@ -77,7 +77,7 @@ impl JsonRpcClient for LoopbackProvider {
     async fn request<T, R>(&self, _method: &str, _params: T) -> Result<R, Self::Error>
     where
         T: Debug + Serialize + Send + Sync,
-        R: Serialize + DeserializeOwned,
+        R: DeserializeOwned,
     {
         unreachable!("It shall not send out actual requests.")
     }
