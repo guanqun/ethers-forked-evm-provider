@@ -8,7 +8,7 @@ use ethers::abi::ethereum_types::H256;
 use ethers::core::types::transaction::eip2718::TypedTransaction;
 use ethers::core::types::{BlockId, NameOrAddress};
 use ethers::providers::{JsonRpcClient, Middleware, PendingTransaction, Provider, ProviderError};
-use ethers::types::{Bytes, U64};
+use ethers::types::{Address, Bytes, U64};
 use evmodin::Revision;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -17,6 +17,7 @@ use std::fmt::Debug;
 use std::ops::DerefMut;
 use std::path::PathBuf;
 use std::sync::Arc;
+use anyhow::anyhow;
 use primitive_types::U256;
 use tokio::sync::Mutex;
 
@@ -82,6 +83,22 @@ impl ForkedEvmProvider {
             backend: Arc::new(Mutex::new(intra_block_state)),
             dummy_provider: Provider::new(LoopbackProvider),
         })
+    }
+
+    pub async fn deploy(&self,
+        tx: &TypedTransaction,
+    ) -> anyhow::Result<Address> {
+        let mut lock = self.backend.lock().await;
+        let ret = execute(
+            lock.deref_mut(),
+            &self.header,
+            Revision::London,
+            tx,
+            tx.gas().cloned().unwrap_or_default().as_u64() as i64,
+        )
+            .await
+            .unwrap();
+        Ok(ret.create_address.ok_or_else(|| anyhow!("failed to create address"))?)
     }
 }
 

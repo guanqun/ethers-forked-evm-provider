@@ -27,6 +27,8 @@ pub struct CallResult {
     pub gas_left: i64,
     /// Output data returned.
     pub output_data: Bytes,
+    /// Only valid when it's create message
+    pub create_address: Option<Address>,
 }
 
 struct Evm<'state, 'h, 't, B>
@@ -96,6 +98,7 @@ pub async fn execute<B: State>(
         status_code: res.status_code,
         gas_left: res.gas_left,
         output_data: res.output_data,
+        create_address: res.create_address,
     })
 }
 
