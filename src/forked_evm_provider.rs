@@ -3,6 +3,7 @@ use crate::akula::interface::State;
 use crate::akula::intra_block_state::IntraBlockState;
 use crate::akula::types::PartialHeader;
 use crate::state_muxer::{BackendConfig, StateMuxer};
+use anyhow::anyhow;
 use async_trait::async_trait;
 use ethers::abi::ethereum_types::H256;
 use ethers::core::types::transaction::eip2718::TypedTransaction;
@@ -10,6 +11,7 @@ use ethers::core::types::{BlockId, NameOrAddress};
 use ethers::providers::{JsonRpcClient, Middleware, PendingTransaction, Provider, ProviderError};
 use ethers::types::{Address, Bytes, U64};
 use evmodin::Revision;
+use primitive_types::U256;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::convert::TryFrom;
@@ -17,8 +19,6 @@ use std::fmt::Debug;
 use std::ops::DerefMut;
 use std::path::PathBuf;
 use std::sync::Arc;
-use anyhow::anyhow;
-use primitive_types::U256;
 use tokio::sync::Mutex;
 
 #[derive(Debug)]
@@ -69,7 +69,13 @@ impl ForkedEvmProvider {
         state_block_number: u64,
         archive_wss_url: &str,
     ) -> anyhow::Result<Self> {
-        let state_mux = StateMuxer::new(state_block_number, BackendConfig::AllViaWeb3 { wss_url: archive_wss_url.to_string()}).await?;
+        let state_mux = StateMuxer::new(
+            state_block_number,
+            BackendConfig::AllViaWeb3 {
+                wss_url: archive_wss_url.to_string(),
+            },
+        )
+        .await?;
         let header = state_mux
             .read_block_header(state_block_number + 1)
             .await?
@@ -85,9 +91,7 @@ impl ForkedEvmProvider {
         })
     }
 
-    pub async fn deploy(&self,
-        tx: &TypedTransaction,
-    ) -> anyhow::Result<Address> {
+    pub async fn deploy(&self, tx: &TypedTransaction) -> anyhow::Result<Address> {
         let mut lock = self.backend.lock().await;
         let ret = execute(
             lock.deref_mut(),
@@ -96,9 +100,11 @@ impl ForkedEvmProvider {
             tx,
             tx.gas().cloned().unwrap_or_default().as_u64() as i64,
         )
-            .await
-            .unwrap();
-        Ok(ret.create_address.ok_or_else(|| anyhow!("failed to create address"))?)
+        .await
+        .unwrap();
+        Ok(ret
+            .create_address
+            .ok_or_else(|| anyhow!("failed to create address"))?)
     }
 }
 
@@ -135,17 +141,28 @@ impl Middleware for ForkedEvmProvider {
         Ok(self.state_block_number.into())
     }
 
+    async fn get_balance<T: Into<NameOrAddress> + Send + Sync>(
+        &self,
+        from: T,
+        block: Option<BlockId>,
+    ) -> Result<U256, ProviderError> {
+        let from = match from.into() {
+            NameOrAddress::Name(_) => todo!(),
+            NameOrAddress::Address(addr) => addr,
+        };
+
+        let mut lock = self.backend.lock().await;
+        Ok(lock.get_balance(from).await.unwrap())
+    }
+
     async fn get_transaction_count<T: Into<NameOrAddress> + Send + Sync>(
         &self,
         from: T,
         _block: Option<BlockId>,
     ) -> Result<U256, Self::Error> {
-        let from = from.into();
-        let from = match from {
-            NameOrAddress::Name(_) => { todo!("not supported") }
-            NameOrAddress::Address(address) => {
-                address
-            }
+        let from = match from.into() {
+            NameOrAddress::Name(_) => todo!(),
+            NameOrAddress::Address(addr) => addr,
         };
 
         let mut lock = self.backend.lock().await;
