@@ -62,6 +62,26 @@ impl ForkedEvmProvider {
             dummy_provider: Provider::new(LoopbackProvider),
         })
     }
+
+    pub async fn new_with_remote(
+        state_block_number: u64,
+        archive_wss_url: &str,
+    ) -> anyhow::Result<Self> {
+        let state_mux = StateMuxer::new(state_block_number, BackendConfig::AllViaWeb3 { wss_url: archive_wss_url.to_string()}).await?;
+        let header = state_mux
+            .read_block_header(state_block_number + 1)
+            .await?
+            .expect("failed to get header");
+
+        let intra_block_state = IntraBlockState::new(state_mux);
+
+        Ok(Self {
+            header,
+            state_block_number,
+            backend: Arc::new(Mutex::new(intra_block_state)),
+            dummy_provider: Provider::new(LoopbackProvider),
+        })
+    }
 }
 
 #[derive(Debug)]
