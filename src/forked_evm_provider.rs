@@ -17,6 +17,7 @@ use std::fmt::Debug;
 use std::ops::DerefMut;
 use std::path::PathBuf;
 use std::sync::Arc;
+use primitive_types::U256;
 use tokio::sync::Mutex;
 
 #[derive(Debug)]
@@ -115,6 +116,23 @@ impl Middleware for ForkedEvmProvider {
 
     async fn get_block_number(&self) -> Result<U64, Self::Error> {
         Ok(self.state_block_number.into())
+    }
+
+    async fn get_transaction_count<T: Into<NameOrAddress> + Send + Sync>(
+        &self,
+        from: T,
+        _block: Option<BlockId>,
+    ) -> Result<U256, Self::Error> {
+        let from = from.into();
+        let from = match from {
+            NameOrAddress::Name(_) => { todo!("not supported") }
+            NameOrAddress::Address(address) => {
+                address
+            }
+        };
+
+        let mut lock = self.backend.lock().await;
+        Ok(lock.get_nonce(from).await.unwrap().into())
     }
 
     async fn send_transaction<T: Into<TypedTransaction> + Send + Sync>(
