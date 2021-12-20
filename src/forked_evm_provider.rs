@@ -10,7 +10,7 @@ use ethers::core::types::transaction::eip2718::TypedTransaction;
 use ethers::core::types::{BlockId, NameOrAddress};
 use ethers::providers::{JsonRpcClient, Middleware, PendingTransaction, Provider, ProviderError};
 use ethers::types::{Address, Bytes, U64};
-use evmodin::Revision;
+use evmodin::{Revision, StatusCode};
 use primitive_types::U256;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -76,10 +76,11 @@ impl ForkedEvmProvider {
             },
         )
         .await?;
-        let header = state_mux
+        let mut header = state_mux
             .read_block_header(state_block_number + 1)
             .await?
             .expect("failed to get header");
+        header.number += 1;
 
         let intra_block_state = IntraBlockState::new(state_mux);
 
@@ -105,6 +106,29 @@ impl ForkedEvmProvider {
         Ok(ret
             .create_address
             .ok_or_else(|| anyhow!("failed to create address"))?)
+    }
+
+    async fn transact(&self, tx: &TypedTransaction) -> Result<u64, Self::Error> {
+        let mut lock = self.backend.lock().await;
+        let ret = execute(
+            lock.deref_mut(),
+            &self.header,
+            Revision::London,
+            tx,
+            i64::MAX,
+        )
+        .await
+        .unwrap();
+
+        // only return the output data if it's successful
+        if ret.status_code == StatusCode::Success {
+            Ok((i64::MAX - ret.gas_left) as u64)
+        } else {
+            Err(ProviderError::CustomError(format!(
+                "reverted with {:?}",
+                ret.output_data
+            )))
+        }
     }
 }
 
@@ -204,7 +228,16 @@ impl Middleware for ForkedEvmProvider {
         )
         .await
         .unwrap();
-        Ok(ret.output_data.into())
+
+        // only return the output data if it's successful
+        if ret.status_code == StatusCode::Success {
+            Ok(ret.output_data.into())
+        } else {
+            Err(ProviderError::CustomError(format!(
+                "reverted with {:?}",
+                ret.output_data
+            )))
+        }
     }
 
     async fn get_storage_at<T: Into<NameOrAddress> + Send + Sync>(
