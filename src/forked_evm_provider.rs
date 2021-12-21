@@ -108,7 +108,7 @@ impl ForkedEvmProvider {
             .ok_or_else(|| anyhow!("failed to create address"))?)
     }
 
-    async fn transact(&self, tx: &TypedTransaction) -> Result<u64, Self::Error> {
+    pub async fn transact(&self, tx: &TypedTransaction) -> Result<u64, ProviderError> {
         let mut lock = self.backend.lock().await;
         let ret = execute(
             lock.deref_mut(),
@@ -168,7 +168,7 @@ impl Middleware for ForkedEvmProvider {
     async fn get_balance<T: Into<NameOrAddress> + Send + Sync>(
         &self,
         from: T,
-        block: Option<BlockId>,
+        _block: Option<BlockId>,
     ) -> Result<U256, ProviderError> {
         let from = match from.into() {
             NameOrAddress::Name(_) => todo!(),
