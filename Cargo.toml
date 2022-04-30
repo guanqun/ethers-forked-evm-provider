@@ -8,7 +8,7 @@ edition = "2018"
 [dependencies]
 arrayref = "0.3"
 address-literal = "1.2.0"
-primitive-types = { version = "0.10.1" }
+primitive-types = { version = "0.11.1" }
 anyhow = "1.0"
 auto_impl = "0.4"
 async-trait = { version = "0.1.50", default-features = false }
@@ -16,7 +16,7 @@ async-recursion = "0.3"
 bytes = { version = "1", default-features = false, features = ["serde"] }
 ethers = { git = "https://github.com/guanqun/ethers-rs", features = ["ws", "openssl"] }
 serde = { version = "1.0.124", features = ["derive"] }
-evmodin = { git = "https://github.com/vorot93/evmodin", rev = "767c310aba2e9f8e303af852915ae7a3afc010a2" }
+evmodin = { git = "https://github.com/guanqun/evmodin", rev = "770e1791dce54c69102abc560de83bfa05d6ee34" }
 sha2 = "0.9"
 sha3 = "0.9"
 futures = "0.3"
