@@ -72,7 +72,8 @@ pub async fn execute<B: State>(
     let res = if let Some(to) = to {
         evm.call(Message {
             kind: CallKind::Call,
-            is_static: from.is_zero(),
+            // it's a bit hacky, but it allows us to call uniswap v3 quoter locally
+            is_static: false,
             depth: 0,
             sender: from,
             input_data,
