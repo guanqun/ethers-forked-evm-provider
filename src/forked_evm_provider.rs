@@ -108,7 +108,7 @@ impl ForkedEvmProvider {
             .ok_or_else(|| anyhow!("failed to create address"))?)
     }
 
-    pub async fn transact(&self, tx: &TypedTransaction) -> Result<u64, ProviderError> {
+    pub async fn transact(&self, tx: &TypedTransaction) -> Result<(u64, Vec<u8>), ProviderError> {
         let mut lock = self.backend.lock().await;
         let ret = execute(
             lock.deref_mut(),
@@ -122,7 +122,7 @@ impl ForkedEvmProvider {
 
         // only return the output data if it's successful
         if ret.status_code == StatusCode::Success {
-            Ok((i64::MAX - ret.gas_left) as u64)
+            Ok(((i64::MAX - ret.gas_left) as u64, ret.output_data.to_vec()))
         } else {
             Err(ProviderError::CustomError(format!(
                 "reverted with {:?}",
