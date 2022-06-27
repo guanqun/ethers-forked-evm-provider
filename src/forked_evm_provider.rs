@@ -92,6 +92,13 @@ impl ForkedEvmProvider {
         })
     }
 
+    pub async fn set_balance(&self, account: Address, value: impl Into<U256>) {
+        let value = value.into();
+
+        let mut lock = self.backend.lock().await;
+        let _ = lock.set_balance(account, value).await.expect("failed to set the balance");
+    }
+
     pub async fn deploy(&self, tx: &TypedTransaction) -> anyhow::Result<Address> {
         let mut lock = self.backend.lock().await;
         let ret = execute(
